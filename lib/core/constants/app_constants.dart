@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   // API
-  static const String apiBaseUrl = 'https://api.styleai.example.com/v1';
+  static const String apiBaseUrl = 'https://drapeai-wnum.onrender.com';
 
   // Image upload is proxied through backend — never hardcode credentials in production.
   // Set via backend — never hardcode in production.
