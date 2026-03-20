@@ -8,6 +8,9 @@ class ClothingItem {
   final String? brand;
   final String? notes;
   final DateTime? createdAt;
+  // AI-enhanced versions — populated async after upload (~5s)
+  final String? enhancedUrl;  // Cloudinary BG-removed / colour-corrected
+  final String? dalleUrl;     // DALL-E clean render (low-quality photos only)
 
   const ClothingItem({
     required this.id,
@@ -19,7 +22,15 @@ class ClothingItem {
     this.brand,
     this.notes,
     this.createdAt,
+    this.enhancedUrl,
+    this.dalleUrl,
   });
+
+  /// Best available image: dalle > enhanced > original
+  String get displayUrl => dalleUrl ?? enhancedUrl ?? imageUrl;
+
+  /// True once any AI-enhanced version is available
+  bool get isEnhanced => enhancedUrl != null || dalleUrl != null;
 
   factory ClothingItem.fromJson(Map<String, dynamic> json) {
     return ClothingItem(
@@ -28,12 +39,14 @@ class ClothingItem {
       color: json['color'] as String,
       style: json['style'] as String,
       imageUrl: json['image_url'] as String,
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as String? ?? '',
       brand: json['brand'] as String?,
       notes: json['notes'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
+      enhancedUrl: json['enhanced_url'] as String?,
+      dalleUrl: json['dalle_url'] as String?,
     );
   }
 
@@ -47,6 +60,8 @@ class ClothingItem {
     if (brand != null) 'brand': brand,
     if (notes != null) 'notes': notes,
     if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+    if (enhancedUrl != null) 'enhanced_url': enhancedUrl,
+    if (dalleUrl != null) 'dalle_url': dalleUrl,
   };
 
   ClothingItem copyWith({
@@ -59,6 +74,8 @@ class ClothingItem {
     String? brand,
     String? notes,
     DateTime? createdAt,
+    String? enhancedUrl,
+    String? dalleUrl,
   }) {
     return ClothingItem(
       id: id ?? this.id,
@@ -70,6 +87,8 @@ class ClothingItem {
       brand: brand ?? this.brand,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
+      enhancedUrl: enhancedUrl ?? this.enhancedUrl,
+      dalleUrl: dalleUrl ?? this.dalleUrl,
     );
   }
 

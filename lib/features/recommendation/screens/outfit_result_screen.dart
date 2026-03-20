@@ -119,12 +119,17 @@ class OutfitResultScreen extends ConsumerWidget {
                   _buildWhyThisWorks(outfit, theme),
                   const SizedBox(height: 24),
                   // Style notes
-                  if (outfit.styleNotes.isNotEmpty)
+                  if (outfit.styleNotesClean.isNotEmpty)
                     _buildStyleNotes(outfit, theme),
                   const SizedBox(height: 24),
                   // Weather context
                   _buildWeatherContext(outfit, theme),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  // Trending combos
+                  _buildTrendingCombos(outfit, theme),
+                  if (outfit.trendingCombos.isNotEmpty)
+                    const SizedBox(height: 8),
+                  const SizedBox(height: 24),
                   // Action buttons
                   PrimaryButton(
                     label: outfit.isSaved ? 'Saved to Collection' : 'Save Outfit',
@@ -157,18 +162,21 @@ class OutfitResultScreen extends ConsumerWidget {
   }
 
   Widget _buildScoreBanner(OutfitModel outfit, ThemeData theme) {
+    final engine = outfit.engineLabel;
+    final isAI = engine != null && engine.contains('gpt');
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.accentColor.withOpacity(0.08),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+            AppTheme.accentColor.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -189,10 +197,43 @@ class OutfitResultScreen extends ConsumerWidget {
                     color: AppTheme.primaryColor,
                   ),
                 ),
-                Text(
-                  'AI Confidence: ${outfit.scorePercentage}%',
-                  style: theme.textTheme.bodySmall,
-                ),
+                const SizedBox(height: 4),
+                // Engine badge
+                if (engine != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isAI
+                          ? AppTheme.primaryColor.withValues(alpha: 0.12)
+                          : Colors.grey.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isAI
+                              ? Icons.psychology_rounded
+                              : Icons.rule_rounded,
+                          size: 11,
+                          color: isAI
+                              ? AppTheme.primaryColor
+                              : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isAI ? 'GPT-4o powered' : 'Rule-based',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: isAI
+                                ? AppTheme.primaryColor
+                                : Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -202,9 +243,10 @@ class OutfitResultScreen extends ConsumerWidget {
             child: Stack(
               children: [
                 CircularProgressIndicator(
-                  value: outfit.score,
+                  value: outfit.scorePercentage / 100,
                   strokeWidth: 5,
-                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  backgroundColor:
+                      AppTheme.primaryColor.withValues(alpha: 0.1),
                   color: AppTheme.primaryColor,
                 ),
                 Center(
@@ -301,34 +343,53 @@ class OutfitResultScreen extends ConsumerWidget {
   }
 
   Widget _buildStyleNotes(OutfitModel outfit, ThemeData theme) {
+    final tip = outfit.styleNotesClean;
+    if (tip.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Styling Tips', style: theme.textTheme.titleMedium),
+        Text('Styling Tip', style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
-        ...outfit.styleNotes.map(
-          (note) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 6),
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(note, style: theme.textTheme.bodyMedium),
-                ),
-              ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: AppTheme.primaryColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(tip, style: theme.textTheme.bodyMedium),
+            ),
+          ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildTrendingCombos(OutfitModel outfit, ThemeData theme) {
+    if (outfit.trendingCombos.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.trending_up_rounded,
+                color: AppTheme.primaryColor, size: 18),
+            const SizedBox(width: 6),
+            Text('Trending Now', style: theme.textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...outfit.trendingCombos.map((combo) => _TrendingComboCard(
+              combo: combo,
+              theme: theme,
+            )),
       ],
     );
   }
@@ -337,10 +398,10 @@ class OutfitResultScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.accentColor.withOpacity(0.08),
+        color: AppTheme.accentColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: AppTheme.accentColor.withOpacity(0.2),
+          color: AppTheme.accentColor.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -400,7 +461,7 @@ class _ClothingItemTile extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: CachedNetworkImage(
-            imageUrl: item.imageUrl,
+            imageUrl: item.displayUrl,
             width: double.infinity,
             height: height,
             fit: BoxFit.cover,
@@ -416,7 +477,7 @@ class _ClothingItemTile extends StatelessWidget {
               ),
               child: Icon(
                 Icons.image_not_supported_outlined,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -427,7 +488,7 @@ class _ClothingItemTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -441,6 +502,120 @@ class _ClothingItemTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TrendingComboCard extends StatelessWidget {
+  final Map<String, dynamic> combo;
+  final ThemeData theme;
+
+  const _TrendingComboCard({required this.combo, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = combo['title'] as String? ?? '';
+    final description = combo['description'] as String? ?? '';
+    final wardrobeMatch = combo['wardrobe_match'] as String? ?? '';
+    final tags = (combo['tags'] as List<dynamic>? ?? []).cast<String>();
+    final images = (combo['reference_images'] as List<dynamic>? ?? []).cast<String>();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title + tags
+          Row(
+            children: [
+              Expanded(
+                child: Text(title,
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ),
+              if (tags.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tags.first,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(description,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.hintColor, height: 1.4)),
+          if (wardrobeMatch.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.checkroom_rounded,
+                    size: 13, color: AppTheme.primaryColor),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    wardrobeMatch,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // Pexels reference images
+          if (images.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 90,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: images[i],
+                    width: 70,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      width: 70,
+                      height: 90,
+                      color: theme.colorScheme.surface,
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      width: 70,
+                      height: 90,
+                      color: theme.colorScheme.surface,
+                      child: Icon(Icons.image_not_supported_outlined,
+                          size: 20, color: theme.hintColor),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
