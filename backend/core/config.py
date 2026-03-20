@@ -17,10 +17,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=43200, alias="JWT_EXPIRE_MINUTES")
 
-    # Firebase
+    # Firebase — either a file path or the raw JSON string (for Render/cloud deployments)
     firebase_credentials_path: str = Field(
         default="./firebase-credentials.json", alias="FIREBASE_CREDENTIALS_PATH"
     )
+    firebase_credentials_json: str = Field(default="", alias="FIREBASE_CREDENTIALS_JSON")
 
     # Cloudinary
     cloudinary_cloud_name: str = Field(default="", alias="CLOUDINARY_CLOUD_NAME")

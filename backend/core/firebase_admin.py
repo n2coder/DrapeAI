@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+import tempfile
 import firebase_admin
 from firebase_admin import auth, credentials
 from fastapi import HTTPException, status
@@ -11,28 +13,49 @@ _firebase_app: firebase_admin.App | None = None
 
 
 def init_firebase() -> None:
-    """Initialise the Firebase Admin SDK from the service account credentials file."""
+    """Initialise the Firebase Admin SDK.
+
+    Tries, in order:
+    1. FIREBASE_CREDENTIALS_JSON env var (JSON string — preferred for cloud deployments)
+    2. FIREBASE_CREDENTIALS_PATH file (local / Docker volume)
+    """
     global _firebase_app
 
     if _firebase_app is not None:
         logger.debug("Firebase already initialised")
         return
 
-    creds_path = settings.firebase_credentials_path
+    cred = None
 
-    if not os.path.exists(creds_path):
-        # In development / testing, allow missing credentials with a warning.
-        logger.warning(
-            "Firebase credentials file not found at %s. "
-            "OTP verification will be unavailable.",
-            creds_path,
-        )
-        return
+    # 1. Try JSON string from environment variable
+    if settings.firebase_credentials_json:
+        try:
+            cred_dict = json.loads(settings.firebase_credentials_json)
+            cred = credentials.Certificate(cred_dict)
+            logger.info("Firebase Admin SDK initialised from FIREBASE_CREDENTIALS_JSON env var")
+        except Exception as e:
+            logger.error("Failed to parse FIREBASE_CREDENTIALS_JSON: %s", e)
+            raise
+
+    # 2. Fall back to credentials file path
+    if cred is None:
+        creds_path = settings.firebase_credentials_path
+        if not os.path.exists(creds_path):
+            logger.warning(
+                "Firebase credentials not found (checked FIREBASE_CREDENTIALS_JSON env var "
+                "and file path %s). OTP verification will be unavailable.",
+                creds_path,
+            )
+            return
+        try:
+            cred = credentials.Certificate(creds_path)
+            logger.info("Firebase Admin SDK initialised from file %s", creds_path)
+        except Exception as e:
+            logger.error("Failed to initialise Firebase Admin SDK from file: %s", e)
+            raise
 
     try:
-        cred = credentials.Certificate(creds_path)
         _firebase_app = firebase_admin.initialize_app(cred)
-        logger.info("Firebase Admin SDK initialised successfully")
     except Exception as e:
         logger.error("Failed to initialise Firebase Admin SDK: %s", e)
         raise

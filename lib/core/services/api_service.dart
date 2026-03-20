@@ -119,9 +119,7 @@ class ApiService {
       Uri.parse('$_baseUrl/auth/verify-otp'),
       headers: headers,
       body: jsonEncode({
-        'phone_number': phoneNumber,
-        'otp': otp,
-        'firebase_token': firebaseToken,
+        'firebase_id_token': firebaseToken,
       }),
     );
     return _handleResponse(response);
