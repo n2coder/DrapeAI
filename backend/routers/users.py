@@ -1,10 +1,11 @@
 import logging
 import re
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Depends
 from bson import ObjectId
 from core.database import get_users_collection
-from core.dependencies import CurrentUser
+from core.dependencies import CurrentUser, get_current_user
 from core.gdpr import delete_user_data, export_user_data
+from core.weather_client import get_weather
 from models.user import OnboardingData, UserResponse, UserUpdate
 from utils.response import success, error
 
@@ -16,6 +17,29 @@ router = APIRouter(prefix="/users", tags=["Users"])
 def _strip_html(value: str) -> str:
     """Remove HTML tags from a string to prevent XSS injection."""
     return re.sub(r"<[^>]+>", "", value)
+
+
+@router.get("/weather", summary="Get weather for a city")
+async def get_weather_for_city(
+    city: str = Query(..., description="City name"),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Fetch current weather for the given city via OpenWeatherMap."""
+    try:
+        weather = await get_weather(city)
+        return success(data={
+            "temperature": weather.temperature_c,
+            "description": weather.description,
+            "icon": "01d",
+            "cityName": weather.city,
+            "feelsLike": weather.temperature_c,
+            "humidity": weather.humidity,
+            "windSpeed": weather.wind_kph,
+            "condition": weather.condition,
+        }, message="Weather fetched")
+    except Exception as exc:
+        logger.warning("Weather fetch failed for city %s: %s", city, exc)
+        return error(message=f"Could not fetch weather for '{city}'", status_code=404)
 
 
 @router.get("/profile", summary="Get current user profile")
