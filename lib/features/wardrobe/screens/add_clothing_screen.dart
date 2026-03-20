@@ -11,6 +11,7 @@ import 'package:style_ai/core/theme/app_theme.dart';
 import 'package:style_ai/features/wardrobe/models/clothing_item.dart';
 import 'package:style_ai/features/wardrobe/providers/wardrobe_provider.dart';
 import 'package:style_ai/widgets/common/primary_button.dart';
+import 'package:style_ai/widgets/photo_guide_modal.dart';
 
 class AddClothingScreen extends ConsumerStatefulWidget {
   final ClothingItem? existingItem;
@@ -219,7 +220,7 @@ class _AddClothingScreenState extends ConsumerState<AddClothingScreen> {
                                 ),
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.4),
+                                    color: Colors.black.withValues(alpha: 0.4),
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                   child: const Column(
@@ -247,7 +248,7 @@ class _AddClothingScreenState extends ConsumerState<AddClothingScreen> {
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.1),
+                                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -273,12 +274,28 @@ class _AddClothingScreenState extends ConsumerState<AddClothingScreen> {
                             ),
                 ),
               ),
-              const SizedBox(height: 24),
+              // Photo tips link (only shown when adding new item)
+              if (!_isEditing) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                    icon: const Icon(Icons.tips_and_updates_rounded, size: 16),
+                    label: const Text('Photo tips'),
+                    onPressed: () => PhotoGuideModal.show(context),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
               // Category dropdown
               Text('Category', style: theme.textTheme.titleSmall),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   hintText: 'Select category',
                 ),

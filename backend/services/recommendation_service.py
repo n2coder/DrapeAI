@@ -10,6 +10,7 @@ from models.wardrobe import ClothingItem
 from models.recommendation import OutfitRecommendation, WeatherContext
 from services.wardrobe_service import get_user_wardrobe
 from services.weather_service import get_weather_for_city
+from services.trending_service import get_trending_combos
 from engine.recommendation_engine import RecommendationEngine
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ def _rec_to_dict(rec: OutfitRecommendation) -> dict:
         "date": rec.date.isoformat(),
         "is_saved": rec.is_saved,
         "created_at": rec.created_at.isoformat(),
+        "trending_combos": rec.trending_combos,
     }
 
 
@@ -131,7 +133,7 @@ async def get_today_recommendation(user: UserDocument) -> OutfitRecommendation:
     weather = await get_weather_for_city(city)
 
     try:
-        rec = _engine.generate_outfit(
+        rec = await _engine.generate_outfit(
             wardrobe=wardrobe,
             occasion="casual",
             weather=weather,
@@ -143,6 +145,10 @@ async def get_today_recommendation(user: UserDocument) -> OutfitRecommendation:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
         )
+
+    # Fetch trending combos in parallel with caching/persisting
+    trending = await get_trending_combos(wardrobe, occasion="casual", weather_condition=weather.condition)
+    rec.trending_combos = trending
 
     rec_dict = _rec_to_dict(rec)
     await cache_set(cache_key, rec_dict, ttl=RECOMMENDATION_TTL)
@@ -177,7 +183,7 @@ async def get_custom_recommendation(
         )
 
     try:
-        rec = _engine.generate_outfit(
+        rec = await _engine.generate_outfit(
             wardrobe=wardrobe,
             occasion=occasion,
             weather=weather,
@@ -189,6 +195,9 @@ async def get_custom_recommendation(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
         )
+
+    trending = await get_trending_combos(wardrobe, occasion=occasion, weather_condition=weather.condition)
+    rec.trending_combos = trending
 
     await _persist_recommendation(rec)
     return rec

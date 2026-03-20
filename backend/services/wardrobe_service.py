@@ -8,6 +8,8 @@ from fastapi import HTTPException, status
 from core.database import get_wardrobe_collection
 from core.cloudinary_client import upload_image, delete_image, WARDROBE_FOLDER, build_public_id
 from models.wardrobe import ClothingItem, ClothingItemCreate, ClothingItemUpdate
+from engine.vision_analyzer import analyze_clothing_image
+from engine.image_enhancer import enhance_clothing_image
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +96,45 @@ async def add_clothing_item(
         "created_at": now,
     }
 
-    await col.insert_one(doc)
+    result = await col.insert_one(doc)
+    inserted_oid = result.inserted_id
     doc["id"] = str(doc.pop("_id"))
-    logger.info("Wardrobe item added: %s for user %s", doc["id"], user_id)
-    return ClothingItem(**doc)
+    item = ClothingItem(**doc)
+
+    logger.info("Wardrobe item added: %s for user %s", item.id, user_id)
+
+    # Fire-and-forget: run AI enrichment in background (vision analysis + image enhancement)
+    asyncio.create_task(_enrich_item(inserted_oid, image_bytes, image_url, data.color))
+
+    return item
+
+
+async def _enrich_item(oid: ObjectId, image_bytes: bytes, original_url: str, color: str) -> None:
+    """
+    Background task: run GPT-4o Vision analysis and Cloudinary/DALL-E image enhancement
+    in parallel, then patch the results into MongoDB.
+    """
+    try:
+        vision_task = asyncio.create_task(analyze_clothing_image(image_bytes))
+        enhance_task = asyncio.create_task(
+            enhance_clothing_image(image_bytes, original_url, item_description=f"{color} clothing item")
+        )
+        attributes, (enhanced_url, dalle_url) = await asyncio.gather(vision_task, enhance_task)
+
+        updates: dict = {}
+        if attributes:
+            updates["ai_attributes"] = attributes
+        if enhanced_url and enhanced_url != original_url:
+            updates["enhanced_url"] = enhanced_url
+        if dalle_url:
+            updates["dalle_url"] = dalle_url
+
+        if updates:
+            col = get_wardrobe_collection()
+            await col.update_one({"_id": oid}, {"$set": updates})
+            logger.info("AI enrichment saved for item %s (fields: %s)", str(oid), list(updates.keys()))
+    except Exception as e:
+        logger.warning("Background AI enrichment failed for %s: %s", str(oid), e)
 
 
 async def update_clothing_item(

@@ -5,12 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:style_ai/core/constants/app_constants.dart';
 import 'package:style_ai/core/theme/app_theme.dart';
+import 'package:style_ai/core/theme/app_theme_mode.dart';
+import 'package:style_ai/core/theme/theme_provider.dart';
 import 'package:style_ai/features/auth/providers/auth_provider.dart';
-import 'package:style_ai/features/recommendation/models/outfit_model.dart';
 import 'package:style_ai/features/recommendation/providers/recommendation_provider.dart';
 import 'package:style_ai/widgets/common/loading_widget.dart';
 import 'package:style_ai/widgets/common/outfit_card.dart';
-import 'package:style_ai/widgets/common/primary_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -90,8 +90,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Container(
                             width: 36,
                             height: 36,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
                                 colors: [
                                   AppTheme.primaryColor,
                                   AppTheme.secondaryColor,
@@ -468,51 +468,150 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _showProfileMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final currentTheme = ref.watch(themeProvider);
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Theme Switcher
+                  Text(
+                    'Theme',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 90,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: AppThemeMode.values.map((mode) {
+                        final isActive = currentTheme == mode;
+                        return GestureDetector(
+                          onTap: () {
+                            ref.read(themeProvider.notifier).setTheme(mode);
+                            Navigator.pop(context);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 80,
+                            margin: const EdgeInsets.only(right: 10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isActive
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey.shade300,
+                                width: isActive ? 2 : 1,
+                              ),
+                              color: _themePreviewColor(mode),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _themeEmoji(mode),
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  mode.label,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: _themeTextColor(mode),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (isActive) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    width: 16,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline_rounded),
+                    title: const Text('Edit Profile'),
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.logout_rounded, color: AppTheme.errorColor),
+                    title: const Text('Sign Out', style: TextStyle(color: AppTheme.errorColor)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(authProvider.notifier).signOut();
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.person_outline_rounded),
-              title: const Text('Edit Profile'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.logout_rounded,
-                color: AppTheme.errorColor,
-              ),
-              title: const Text(
-                'Sign Out',
-                style: TextStyle(color: AppTheme.errorColor),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(authProvider.notifier).signOut();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+          );
+        },
       ),
     );
+  }
+
+  Color _themePreviewColor(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.blanc:      return const Color(0xFFFAFAFA);
+      case AppThemeMode.obsidian:   return const Color(0xFF0A0A0A);
+      case AppThemeMode.neonPulse:  return const Color(0xFF0A0A18);
+      case AppThemeMode.vogue:      return const Color(0xFFF8F5F0);
+    }
+  }
+
+  Color _themeTextColor(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.blanc:      return const Color(0xFF111111);
+      case AppThemeMode.obsidian:   return const Color(0xFFC9A84C);
+      case AppThemeMode.neonPulse:  return const Color(0xFF9B5DE5);
+      case AppThemeMode.vogue:      return const Color(0xFFC8102E);
+    }
+  }
+
+  String _themeEmoji(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.blanc:      return '🤍';
+      case AppThemeMode.obsidian:   return '🖤';
+      case AppThemeMode.neonPulse:  return '💜';
+      case AppThemeMode.vogue:      return '🩸';
+    }
   }
 }

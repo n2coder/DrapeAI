@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 
@@ -28,6 +28,11 @@ class ClothingItem(BaseModel):
     image_url: str
     cloudinary_public_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    # Populated asynchronously by GPT-4o Vision after upload
+    ai_attributes: Optional[Dict[str, Any]] = None
+    # Populated asynchronously by image enhancer after upload
+    enhanced_url: Optional[str] = None   # Cloudinary BG-removed / colour-corrected URL
+    dalle_url: Optional[str] = None      # DALL-E clean product render (only for low-quality photos)
 
     model_config = {"use_enum_values": True}
 
@@ -59,6 +64,9 @@ class ClothingItemResponse(BaseModel):
     image_url: str
     cloudinary_public_id: str
     created_at: datetime
+    ai_attributes: Optional[Dict[str, Any]] = None
+    enhanced_url: Optional[str] = None
+    dalle_url: Optional[str] = None
 
     @classmethod
     def from_item(cls, item: ClothingItem) -> "ClothingItemResponse":
@@ -71,4 +79,7 @@ class ClothingItemResponse(BaseModel):
             image_url=item.image_url,
             cloudinary_public_id=item.cloudinary_public_id,
             created_at=item.created_at,
+            ai_attributes=item.ai_attributes,
+            enhanced_url=item.enhanced_url,
+            dalle_url=item.dalle_url,
         )

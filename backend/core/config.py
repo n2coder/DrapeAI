@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=43200, alias="JWT_EXPIRE_MINUTES")
 
+    # OpenAI
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+
     # Firebase — either a file path or the raw JSON string (for Render/cloud deployments)
     firebase_credentials_path: str = Field(
         default="./firebase-credentials.json", alias="FIREBASE_CREDENTIALS_PATH"
@@ -30,6 +33,9 @@ class Settings(BaseSettings):
 
     # OpenWeather
     openweather_api_key: str = Field(default="", alias="OPENWEATHER_API_KEY")
+
+    # Pexels (free stock photos for trending combo references)
+    pexels_api_key: str = Field(default="", alias="PEXELS_API_KEY")
 
     # CORS — comma-separated list of allowed origins
     allowed_origins: str = Field(

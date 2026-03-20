@@ -4,34 +4,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:style_ai/core/theme/app_theme.dart';
+import 'package:style_ai/core/theme/theme_provider.dart';
 import 'package:style_ai/router/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-    ),
-  );
-
-  // Lock to portrait orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase.
-  // Before building, run: flutterfire configure
-  // This generates lib/firebase_options.dart (excluded from git).
-  // Then replace the initializeApp call with:
-  //   await Firebase.initializeApp(
-  //     options: DefaultFirebaseOptions.currentPlatform,
-  //   );
-  // Also add google-services.json (Android) and GoogleService-Info.plist (iOS).
   await Firebase.initializeApp();
 
   runApp(
@@ -47,16 +30,25 @@ class StyleAIApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeProvider);
+    final themeData = AppTheme.of(themeMode);
+
+    // Sync status bar brightness to theme
+    final isDark = themeData.brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+    );
 
     return MaterialApp.router(
-      title: 'StyleAI',
+      title: 'DrapeAI',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: ThemeMode.system,
+      theme: themeData,
       routerConfig: router,
       builder: (context, child) {
-        // Apply text scale factor limit
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
           data: mediaQuery.copyWith(

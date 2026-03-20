@@ -28,6 +28,8 @@ class OutfitRecommendation(BaseModel):
     date: Date = Field(default_factory=Date.today)
     is_saved: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    # Trending combos sourced from GPT-4o + Pexels (appended after generation)
+    trending_combos: list[dict] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -60,6 +62,7 @@ class RecommendationResponse(BaseModel):
     date: Date
     is_saved: bool
     created_at: datetime
+    trending_combos: list[dict] = Field(default_factory=list)
 
     @classmethod
     def from_recommendation(cls, rec: OutfitRecommendation) -> "RecommendationResponse":
@@ -70,6 +73,8 @@ class RecommendationResponse(BaseModel):
                 "color": item.color,
                 "style": item.style if isinstance(item.style, str) else item.style.value,
                 "image_url": item.image_url,
+                "enhanced_url": getattr(item, "enhanced_url", None),
+                "dalle_url": getattr(item, "dalle_url", None),
             }
 
         return cls(
@@ -85,4 +90,5 @@ class RecommendationResponse(BaseModel):
             date=rec.date,
             is_saved=rec.is_saved,
             created_at=rec.created_at,
+            trending_combos=rec.trending_combos,
         )

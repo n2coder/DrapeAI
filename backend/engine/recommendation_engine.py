@@ -1,31 +1,39 @@
 """
-Outfit Recommendation Engine.
+Outfit Recommendation Engine — AI-enhanced.
 
-Given a user's wardrobe, occasion, and weather context, produces the best
-scoring outfit combination.
+Pipeline:
+  1. Filter wardrobe into tops / bottoms / footwear
+  2. Pre-rank by occasion style priority (rule-based)
+  3. Build candidate combinations (up to MAX_CANDIDATES)
+  4. Score every candidate with the rule-based scorer
+  5. Take the top-5 rule-scored candidates to the LLM scorer (GPT-4o)
+  6. LLM picks the best, returns score + explanation + style tip
+  7. Fall back to rule-based #1 if LLM is unavailable
 """
 
 import random
 import uuid
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from models.wardrobe import ClothingItem, Category
 from models.recommendation import OutfitRecommendation, WeatherContext
 from core.weather_client import WeatherData
 from engine.rules import get_style_priority
 from engine.scoring import score_combination
+from engine.llm_scorer import llm_score_candidates
 
 MAX_CANDIDATES = 50
+LLM_TOP_N = 5   # How many rule-scored finalists to send to the LLM
 
 
 class RecommendationEngine:
-    """Rule-based outfit recommendation engine."""
+    """AI-enhanced outfit recommendation engine (rule-based pre-filter + GPT-4o final pick)."""
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def generate_outfit(
+    async def generate_outfit(
         self,
         wardrobe: List[ClothingItem],
         occasion: str,
@@ -39,13 +47,13 @@ class RecommendationEngine:
             wardrobe:          Full list of the user's clothing items.
             occasion:          One of the supported occasion strings.
             weather:           Current weather data object.
-            user_preferences:  Optional list of user style preferences (up to 2).
+            user_preferences:  Optional list of user style preferences.
 
         Returns:
-            OutfitRecommendation with the best scoring combination.
+            OutfitRecommendation with AI-selected best combination.
 
         Raises:
-            ValueError: If any clothing category is missing from the wardrobe.
+            ValueError: If any required clothing category is missing.
         """
         tops      = [i for i in wardrobe if self._category_value(i) == "top"]
         bottoms   = [i for i in wardrobe if self._category_value(i) == "bottom"]
@@ -58,24 +66,49 @@ class RecommendationEngine:
         if not footwears:
             raise ValueError("Wardrobe incomplete: no footwear found. Please add at least one pair of footwear.")
 
-        # Pre-filter: prefer items whose style matches the occasion
+        # Step 1 — pre-rank by occasion
         tops      = self._ranked_by_occasion(tops, occasion)
         bottoms   = self._ranked_by_occasion(bottoms, occasion)
         footwears = self._ranked_by_occasion(footwears, occasion)
 
-        # Build candidate combinations (up to MAX_CANDIDATES)
+        # Step 2 — build candidate pool
         candidates = self._sample_candidates(tops, bottoms, footwears)
 
-        # Score every candidate
+        # Step 3 — rule-based scoring of all candidates
         scored: List[tuple] = []
         for top, bottom, footwear in candidates:
             sc, explanations = score_combination(top, bottom, footwear, occasion, weather)
             scored.append((sc, explanations, top, bottom, footwear))
 
-        # Sort descending by score
         scored.sort(key=lambda x: x[0], reverse=True)
 
-        best_score, best_exp, best_top, best_bottom, best_footwear = scored[0]
+        # Step 4 — send top-N finalists to GPT-4o for intelligent final ranking
+        finalists: List[Tuple[ClothingItem, ClothingItem, ClothingItem]] = [
+            (s[2], s[3], s[4]) for s in scored[:LLM_TOP_N]
+        ]
+
+        llm_result = await llm_score_candidates(finalists, occasion, weather)
+
+        if llm_result:
+            best_idx   = llm_result["best_index"]
+            best_score = float(llm_result.get("score", scored[best_idx][0]))
+            best_top, best_bottom, best_footwear = finalists[best_idx]
+
+            # Build rich AI explanation
+            parts = []
+            if llm_result.get("explanation"):
+                parts.append(llm_result["explanation"])
+            if llm_result.get("color_note"):
+                parts.append(llm_result["color_note"])
+            best_explanations = parts if parts else scored[best_idx][1]
+
+            style_notes = llm_result.get("style_tip") or self.generate_style_notes(occasion, weather)
+            engine_used = "gpt-4o-mini"
+        else:
+            # Graceful fallback to rule-based #1
+            best_score, best_explanations, best_top, best_bottom, best_footwear = scored[0]
+            style_notes = self.generate_style_notes(occasion, weather)
+            engine_used = "rule-based"
 
         weather_ctx = WeatherContext(
             city=weather.city,
@@ -84,8 +117,6 @@ class RecommendationEngine:
             humidity=weather.humidity,
             wind_kph=weather.wind_kph,
         )
-
-        style_notes = self.generate_style_notes(occasion, weather)
 
         return OutfitRecommendation(
             id=str(uuid.uuid4()),
@@ -96,25 +127,23 @@ class RecommendationEngine:
             occasion=occasion,
             weather_context=weather_ctx,
             score=best_score,
-            explanation=best_exp,
-            style_notes=style_notes,
+            explanation=best_explanations,
+            style_notes=f"[{engine_used}] {style_notes}",
             date=date.today(),
             is_saved=False,
         )
 
     def generate_style_notes(self, occasion: str, weather: WeatherData) -> str:
-        """Return a short, human-readable style tip for the occasion + weather."""
         tips = {
-            "office": "Keep it polished — tuck in your top and opt for closed-toe shoes.",
-            "casual": "Relax and express yourself. Comfort is the priority.",
-            "party":  "Go bold! A statement piece elevates any party look.",
-            "wedding":"Honour the occasion with elegant, well-fitted attire.",
-            "date":   "Smart-casual strikes the perfect balance — put-together yet approachable.",
-            "gym":    "Prioritise stretch and breathability over style today.",
-            "travel": "Layer smart — comfort for the journey, style at the destination.",
+            "office":  "Keep it polished — tuck in your top and opt for closed-toe shoes.",
+            "casual":  "Relax and express yourself. Comfort is the priority.",
+            "party":   "Go bold! A statement piece elevates any party look.",
+            "wedding": "Honour the occasion with elegant, well-fitted attire.",
+            "date":    "Smart-casual strikes the perfect balance — put-together yet approachable.",
+            "gym":     "Prioritise stretch and breathability over style today.",
+            "travel":  "Layer smart — comfort for the journey, style at the destination.",
         }
         base_tip = tips.get(occasion, "Dress for confidence and comfort.")
-
         weather_addendum = {
             "hot":   " Opt for light, breathable fabrics to stay cool.",
             "cold":  " Layer up — warmth is as important as style today.",
@@ -123,8 +152,7 @@ class RecommendationEngine:
             "warm":  " Light colours will keep you feeling fresh.",
             "mild":  " Perfect weather — almost anything goes!",
         }
-        suffix = weather_addendum.get(weather.condition, "")
-        return base_tip + suffix
+        return base_tip + weather_addendum.get(weather.condition, "")
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -138,10 +166,7 @@ class RecommendationEngine:
     def _style_value(item: ClothingItem) -> str:
         return item.style if isinstance(item.style, str) else item.style.value
 
-    def _ranked_by_occasion(
-        self, items: List[ClothingItem], occasion: str
-    ) -> List[ClothingItem]:
-        """Sort items so that styles preferred for this occasion come first."""
+    def _ranked_by_occasion(self, items: List[ClothingItem], occasion: str) -> List[ClothingItem]:
         priority = get_style_priority(occasion)
         priority_index = {s: i for i, s in enumerate(priority)}
 
@@ -156,34 +181,13 @@ class RecommendationEngine:
         bottoms: List[ClothingItem],
         footwears: List[ClothingItem],
     ) -> List[tuple]:
-        """
-        Generate up to MAX_CANDIDATES (top, bottom, footwear) triples.
-
-        Strategy:
-          - Take the top-N items from each category (preference-ordered).
-          - Build the full Cartesian product if it fits within MAX_CANDIDATES,
-            otherwise sample intelligently.
-        """
         total = len(tops) * len(bottoms) * len(footwears)
-
         if total <= MAX_CANDIDATES:
-            # Full product
-            candidates = [
-                (t, b, f) for t in tops for b in bottoms for f in footwears
-            ]
-        else:
-            # Sample from the top-ranked items in each category
-            n = max(1, int(MAX_CANDIDATES ** (1 / 3)) + 1)
-            sampled_tops      = tops[:min(n * 2, len(tops))]
-            sampled_bottoms   = bottoms[:min(n * 2, len(bottoms))]
-            sampled_footwears = footwears[:min(n * 2, len(footwears))]
+            return [(t, b, f) for t in tops for b in bottoms for f in footwears]
 
-            all_combos = [
-                (t, b, f)
-                for t in sampled_tops
-                for b in sampled_bottoms
-                for f in sampled_footwears
-            ]
-            candidates = random.sample(all_combos, min(MAX_CANDIDATES, len(all_combos)))
-
-        return candidates
+        n = max(1, int(MAX_CANDIDATES ** (1 / 3)) + 1)
+        st = tops[:min(n * 2, len(tops))]
+        sb = bottoms[:min(n * 2, len(bottoms))]
+        sf = footwears[:min(n * 2, len(footwears))]
+        all_combos = [(t, b, f) for t in st for b in sb for f in sf]
+        return random.sample(all_combos, min(MAX_CANDIDATES, len(all_combos)))
