@@ -40,10 +40,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Firebase
-google-services.json
-GoogleService-Info.plist
-firebase_options.dart
+# Firebase — service account (backend secret, never commit)
+backend/*firebase-adminsdk*.json
 
 # Environment files
 .env

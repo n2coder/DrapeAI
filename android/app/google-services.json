@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "487947073954",
+    "project_id": "fashion-ai-app-33369",
+    "storage_bucket": "fashion-ai-app-33369.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:487947073954:android:d0bceaaa3b9241bc53dafb",
+        "android_client_info": {
+          "package_name": "com.drapeai.drape_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-1qC70ZzZUBfEJxIf1fPssmCX8GHYxh8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
