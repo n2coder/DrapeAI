@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # App
     debug: bool = Field(default=True, alias="DEBUG")
-    app_title: str = "StyleAI API"
+    app_title: str = "DrapeAI API"
     app_version: str = "1.0.0"
 
     @field_validator("jwt_secret_key")

@@ -202,22 +202,21 @@ class _SplashScreen extends ConsumerWidget {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6C63FF), Color(0xFFFF6584)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 44,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
               ),
             ),
+          ),
             const SizedBox(height: 20),
             const Text(
-              'StyleAI',
+              'DrapeAI',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,

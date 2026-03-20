@@ -52,8 +52,8 @@ async def upload_image(
             overwrite=True,
             resource_type="image",
             transformation=[
-                {"width": 1024, "height": 1024, "crop": "limit"},
-                {"quality": "auto", "fetch_format": "auto"},
+                {"width": 800, "height": 800, "crop": "limit"},
+                {"quality": "auto:low", "fetch_format": "auto"},
             ],
         )
         url: str = result.get("secure_url", "")

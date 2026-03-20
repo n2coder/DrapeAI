@@ -19,13 +19,13 @@ Future<void> main() async {
 
   runApp(
     const ProviderScope(
-      child: StyleAIApp(),
+      child: DrapeAIApp(),
     ),
   );
 }
 
-class StyleAIApp extends ConsumerWidget {
-  const StyleAIApp({super.key});
+class DrapeAIApp extends ConsumerWidget {
+  const DrapeAIApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

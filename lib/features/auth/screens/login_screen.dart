@@ -103,26 +103,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Icons.auto_awesome,
-                              color: Colors.white,
-                              size: 40,
-                            ),
+                          Image.asset(
+                            'assets/images/logo.png',
+                            width: 90,
+                            height: 90,
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'StyleAI',
+                            'DrapeAI',
                             style: theme.textTheme.displaySmall?.copyWith(
                               fontWeight: FontWeight.w800,
                               foreground: Paint()
@@ -176,9 +164,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
+                                const Text(
                                   '🇮🇳',
-                                  style: const TextStyle(fontSize: 20),
+                                  style: TextStyle(fontSize: 20),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
@@ -189,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   size: 18,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                                 Container(
                                   width: 1,
@@ -286,7 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(f.$1, color: AppTheme.primaryColor, size: 18),

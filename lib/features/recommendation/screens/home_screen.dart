@@ -61,19 +61,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          _getGreeting(),
-                          style: theme.textTheme.bodySmall,
+                        Image.asset(
+                          'assets/images/logo.png',
+                          width: 36,
+                          height: 36,
                         ),
-                        Text(
-                          'StyleAI',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getGreeting(),
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            Text(
+                              'DrapeAI',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

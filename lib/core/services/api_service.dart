@@ -319,9 +319,23 @@ class ApiService {
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return data['secure_url'] as String;
+      final rawUrl = data['secure_url'] as String;
+      // Store a thumbnail URL in the database — Cloudinary serves
+      // a small 400×500 image on-the-fly; the original stays on Cloudinary
+      // but is never referenced directly in MongoDB.
+      return _thumbnailUrl(rawUrl);
     }
     throw const ApiException('Failed to upload image');
+  }
+
+  /// Injects Cloudinary thumbnail transforms into a secure URL so that
+  /// what gets stored in MongoDB always points to a small image (~15–30 KB).
+  static String _thumbnailUrl(String url) {
+    if (!url.contains('res.cloudinary.com')) return url;
+    return url.replaceFirst(
+      '/upload/',
+      '/upload/w_400,h_500,c_fill,q_70,f_auto/',
+    );
   }
 
   void dispose() {

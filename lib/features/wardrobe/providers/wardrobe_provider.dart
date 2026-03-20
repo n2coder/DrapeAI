@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:style_ai/core/services/api_service.dart';
+import 'package:style_ai/core/utils/image_compressor.dart';
 import 'package:style_ai/features/wardrobe/models/clothing_item.dart';
 
 class WardrobeState {
@@ -86,7 +87,8 @@ class WardrobeNotifier extends StateNotifier<WardrobeState> {
   }) async {
     state = state.copyWith(isUploading: true, errorMessage: null);
     try {
-      final imageUrl = await _apiService.uploadImage(imageFile);
+      final compressed = await ImageCompressor.compress(imageFile);
+      final imageUrl = await _apiService.uploadImage(compressed);
       final data = await _apiService.addClothingItem(
         category: category,
         color: color,
@@ -128,7 +130,8 @@ class WardrobeNotifier extends StateNotifier<WardrobeState> {
       if (brand != null) updates['brand'] = brand;
       if (notes != null) updates['notes'] = notes;
       if (newImageFile != null) {
-        final imageUrl = await _apiService.uploadImage(newImageFile);
+        final compressed = await ImageCompressor.compress(newImageFile);
+        final imageUrl = await _apiService.uploadImage(compressed);
         updates['image_url'] = imageUrl;
       }
 

@@ -57,9 +57,9 @@ class _AddClothingScreenState extends ConsumerState<AddClothingScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final picked = await _picker.pickImage(
       source: source,
-      imageQuality: 85,
-      maxWidth: 1024,
-      maxHeight: 1024,
+      imageQuality: 75,   // rough first-pass; ImageCompressor does the real trim
+      maxWidth: 1200,
+      maxHeight: 1200,
     );
     if (picked != null) {
       setState(() => _selectedImage = File(picked.path));
