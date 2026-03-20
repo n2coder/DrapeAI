@@ -2,8 +2,9 @@ services:
   - type: web
     name: styleai-api
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: MONGODB_URL
         sync: false
