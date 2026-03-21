@@ -1,4 +1,3 @@
-import imghdr
 import logging
 from typing import Optional
 from fastapi import APIRouter, File, Form, Query, UploadFile, HTTPException, status
