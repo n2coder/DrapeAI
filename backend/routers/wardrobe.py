@@ -1,11 +1,11 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, File, Form, Query, UploadFile, HTTPException, status
+from fastapi import APIRouter, Query, HTTPException, status
 from core.dependencies import CurrentUser
-from models.wardrobe import Category, ClothingItemCreate, ClothingItemUpdate, ClothingItemResponse, Style
+from models.wardrobe import ClothingItemAddRequest, ClothingItemUpdate, ClothingItemResponse
 from services.wardrobe_service import (
     get_user_wardrobe,
-    add_clothing_item,
+    add_clothing_item_from_url,
     update_clothing_item,
     delete_clothing_item,
     get_wardrobe_item_by_id,
@@ -16,63 +16,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wardrobe", tags=["Wardrobe"])
 
-# Max upload size: 10 MB
-MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
-
-
-def _check_image_magic_bytes(header: bytes) -> bool:
-    """
-    Validate image file by inspecting its magic bytes signature.
-    Supports JPEG, PNG, and WebP.
-    """
-    if header[:3] == b"\xff\xd8\xff":
-        return True  # JPEG
-    if header[:4] == b"\x89PNG":
-        return True  # PNG
-    if header[:4] == b"RIFF" and header[8:12] == b"WEBP":
-        return True  # WebP
-    return False
-
 
 @router.post("/add", summary="Add a clothing item to wardrobe")
 async def add_item(
+    body: ClothingItemAddRequest,
     current_user: CurrentUser,
-    image: UploadFile = File(..., description="Clothing image (JPEG/PNG/WebP, max 10 MB)"),
-    category: Category = Form(..., description="top | bottom | footwear"),
-    color: str = Form(..., description="Primary color of the item"),
-    style: Style = Form(..., description="casual | ethnic | formal | urban"),
 ):
     """
-    Upload a clothing image and add the item to the user's wardrobe.
-    Accepts multipart/form-data with an image file and item metadata.
+    Add a clothing item using a Cloudinary URL (Flutter uploads the image
+    directly to Cloudinary and sends the resulting URL here).
     """
-    # Read first 32 bytes to validate magic bytes (actual file type check)
-    header = await image.read(32)
-    if not _check_image_magic_bytes(header):
-        return error(
-            message="Unsupported file type. File signature does not match JPEG, PNG, or WebP.",
-            status_code=415,
-        )
-
-    # Reset file position and read full content
-    await image.seek(0)
-    image_bytes = await image.read()
-
-    if len(image_bytes) > MAX_IMAGE_SIZE_BYTES:
-        return error(
-            message=f"Image exceeds maximum size of {MAX_IMAGE_SIZE_BYTES // (1024 * 1024)} MB",
-            status_code=413,
-        )
-
-    if not image_bytes:
-        return error(message="Uploaded image file is empty", status_code=400)
-
-    item_data = ClothingItemCreate(category=category, color=color, style=style)
-
-    item = await add_clothing_item(
+    item = await add_clothing_item_from_url(
         user_id=current_user.id,
-        data=item_data,
-        image_bytes=image_bytes,
+        image_url=body.image_url,
+        category=body.category,
+        color=body.color,
+        style=body.style,
+        brand=body.brand,
+        notes=body.notes,
     )
 
     logger.info("Item added: %s (user=%s)", item.id, current_user.id)

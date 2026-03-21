@@ -65,6 +65,71 @@ async def get_user_wardrobe(
     return items
 
 
+async def add_clothing_item_from_url(
+    user_id: str,
+    image_url: str,
+    category,
+    color: str,
+    style,
+    brand: str | None = None,
+    notes: str | None = None,
+) -> ClothingItem:
+    """
+    Persist a wardrobe item whose image was uploaded directly to Cloudinary
+    by the mobile client (unsigned upload preset). The Cloudinary URL is
+    stored as-is; AI enrichment fetches the image bytes from the URL.
+    """
+    col = get_wardrobe_collection()
+    item_id = str(uuid.uuid4())
+
+    cat_val   = category.value if hasattr(category, "value") else str(category)
+    style_val = style.value    if hasattr(style,    "value") else str(style)
+
+    now = datetime.now(tz=timezone.utc)
+    doc = {
+        "_id": ObjectId(),
+        "id": item_id,
+        "user_id": user_id,
+        "category": cat_val,
+        "color": color.lower().strip(),
+        "style": style_val,
+        "image_url": image_url,
+        "cloudinary_public_id": "",   # client-side upload — public_id not available
+        "created_at": now,
+        "brand": brand,
+        "notes": notes,
+    }
+    if brand is None:
+        doc.pop("brand")
+    if notes is None:
+        doc.pop("notes")
+
+    result = await col.insert_one(doc)
+    inserted_oid = result.inserted_id
+    doc["id"] = str(doc.pop("_id"))
+    item = ClothingItem(**doc)
+
+    logger.info("Wardrobe item added (URL): %s for user %s", item.id, user_id)
+
+    # Fire-and-forget AI enrichment — download bytes from the URL
+    asyncio.create_task(_enrich_item_from_url(inserted_oid, image_url, color))
+
+    return item
+
+
+async def _enrich_item_from_url(oid: ObjectId, image_url: str, color: str) -> None:
+    """Download image bytes from Cloudinary URL then run AI enrichment."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(image_url)
+            resp.raise_for_status()
+            image_bytes = resp.content
+        await _enrich_item(oid, image_bytes, image_url, color)
+    except Exception as e:
+        logger.warning("Could not fetch image for enrichment %s: %s", str(oid), e)
+
+
 async def add_clothing_item(
     user_id: str,
     data: ClothingItemCreate,

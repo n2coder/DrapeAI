@@ -8,6 +8,10 @@ class Category(str, Enum):
     top = "top"
     bottom = "bottom"
     footwear = "footwear"
+    outerwear = "outerwear"
+    accessories = "accessories"
+    dress = "dress"
+    ethnic_wear = "ethnic_wear"
 
 
 class Style(str, Enum):
@@ -15,6 +19,9 @@ class Style(str, Enum):
     ethnic = "ethnic"
     formal = "formal"
     urban = "urban"
+    streetwear = "streetwear"
+    bohemian = "bohemian"
+    minimalist = "minimalist"
 
 
 class ClothingItem(BaseModel):
@@ -43,6 +50,17 @@ class ClothingItemCreate(BaseModel):
     category: Category
     color: str = Field(..., min_length=1, max_length=50)
     style: Style
+
+
+class ClothingItemAddRequest(BaseModel):
+    """JSON body for POST /wardrobe/add (Flutter uploads image to Cloudinary directly)."""
+
+    image_url: str = Field(..., min_length=1)
+    category: Category
+    color: str = Field(..., min_length=1, max_length=50)
+    style: Style
+    brand: Optional[str] = Field(default=None, max_length=100)
+    notes: Optional[str] = Field(default=None, max_length=500)
 
 
 class ClothingItemUpdate(BaseModel):
