@@ -21,8 +21,8 @@ def _strip_html(value: str) -> str:
 
 @router.get("/weather", summary="Get weather for a city")
 async def get_weather_for_city(
-    city: str = Query(..., description="City name"),
     current_user: CurrentUser,
+    city: str = Query(..., description="City name"),
 ):
     """Fetch current weather for the given city via OpenWeatherMap."""
     try:
