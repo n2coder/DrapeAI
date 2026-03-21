@@ -3,7 +3,7 @@ import re
 from fastapi import APIRouter, HTTPException, Query, Depends
 from bson import ObjectId
 from core.database import get_users_collection
-from core.dependencies import CurrentUser, get_current_user
+from core.dependencies import CurrentUser
 from core.gdpr import delete_user_data, export_user_data
 from core.weather_client import get_weather
 from models.user import OnboardingData, UserResponse, UserUpdate
@@ -22,7 +22,7 @@ def _strip_html(value: str) -> str:
 @router.get("/weather", summary="Get weather for a city")
 async def get_weather_for_city(
     city: str = Query(..., description="City name"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser,
 ):
     """Fetch current weather for the given city via OpenWeatherMap."""
     try:
