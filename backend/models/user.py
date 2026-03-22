@@ -45,7 +45,7 @@ class OnboardingData(BaseModel):
     @field_validator("gender")
     @classmethod
     def validate_gender(cls, v: str) -> str:
-        allowed = {"male", "female", "non_binary", "prefer_not_to_say"}
+        allowed = {"male", "female", "other", "non_binary", "prefer_not_to_say"}
         if v not in allowed:
             raise ValueError(f"gender must be one of {allowed}")
         return v
@@ -53,7 +53,7 @@ class OnboardingData(BaseModel):
     @field_validator("age_range")
     @classmethod
     def validate_age_range(cls, v: str) -> str:
-        allowed = {"18-24", "25-34", "35-44", "45+"}
+        allowed = {"13-17", "18-24", "25-34", "35-44", "45-54", "55+", "45+"}
         if v not in allowed:
             raise ValueError(f"age_range must be one of {allowed}")
         return v
@@ -61,7 +61,7 @@ class OnboardingData(BaseModel):
     @field_validator("style_preferences")
     @classmethod
     def validate_style_preferences(cls, v: list[str]) -> list[str]:
-        allowed = {"casual", "ethnic", "formal", "urban", "sporty", "bohemian"}
+        allowed = {"casual", "ethnic", "formal", "urban", "streetwear", "bohemian", "minimalist", "sporty"}
         for pref in v:
             if pref not in allowed:
                 raise ValueError(f"style_preference '{pref}' is not valid. Allowed: {allowed}")

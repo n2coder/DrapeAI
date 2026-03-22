@@ -69,6 +69,9 @@ class ClothingItemUpdate(BaseModel):
     category: Optional[Category] = None
     color: Optional[str] = Field(default=None, min_length=1, max_length=50)
     style: Optional[Style] = None
+    image_url: Optional[str] = Field(default=None, min_length=1)
+    brand: Optional[str] = Field(default=None, max_length=100)
+    notes: Optional[str] = Field(default=None, max_length=500)
 
 
 class ClothingItemResponse(BaseModel):

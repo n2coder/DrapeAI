@@ -57,10 +57,10 @@ class OutfitModel {
 
     return OutfitModel(
       id: json['id'] as String?,
-      top: ClothingItem.fromJson(json['top'] as Map<String, dynamic>),
-      bottom: ClothingItem.fromJson(json['bottom'] as Map<String, dynamic>),
-      footwear: ClothingItem.fromJson(json['footwear'] as Map<String, dynamic>),
-      occasion: json['occasion'] as String,
+      top: ClothingItem.fromJson((json['top'] as Map<String, dynamic>?) ?? {}),
+      bottom: ClothingItem.fromJson((json['bottom'] as Map<String, dynamic>?) ?? {}),
+      footwear: ClothingItem.fromJson((json['footwear'] as Map<String, dynamic>?) ?? {}),
+      occasion: json['occasion'] as String? ?? 'Casual',
       weatherContext: weatherContext,
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
       explanation: explanation,

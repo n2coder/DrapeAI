@@ -4,10 +4,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:style_ai/core/constants/app_constants.dart';
 import 'package:style_ai/core/services/api_service.dart';
+import 'package:style_ai/core/services/biometric_service.dart';
 
 enum AuthStatus {
   initial,
   unauthenticated,
+  locked,             // JWT exists but awaiting biometric unlock
   otpSent,
   verifying,
   authenticated,
@@ -23,6 +25,7 @@ class AuthState {
   final String? userId;
   final String? errorMessage;
   final bool isLoading;
+  final bool biometricAvailable;
 
   const AuthState({
     this.status = AuthStatus.initial,
@@ -32,6 +35,7 @@ class AuthState {
     this.userId,
     this.errorMessage,
     this.isLoading = false,
+    this.biometricAvailable = false,
   });
 
   AuthState copyWith({
@@ -42,6 +46,7 @@ class AuthState {
     String? userId,
     String? errorMessage,
     bool? isLoading,
+    bool? biometricAvailable,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -51,6 +56,7 @@ class AuthState {
       userId: userId ?? this.userId,
       errorMessage: errorMessage,
       isLoading: isLoading ?? this.isLoading,
+      biometricAvailable: biometricAvailable ?? this.biometricAvailable,
     );
   }
 }
@@ -58,13 +64,16 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final FirebaseAuth _firebaseAuth;
   final ApiService _apiService;
+  final BiometricService _biometricService;
   final _secureStorage = const FlutterSecureStorage();
 
   AuthNotifier({
     FirebaseAuth? firebaseAuth,
     ApiService? apiService,
+    BiometricService? biometricService,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _apiService = apiService ?? ApiService(),
+        _biometricService = biometricService ?? BiometricService(),
         super(const AuthState()) {
     _init();
   }
@@ -73,23 +82,80 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final token = await _secureStorage.read(key: AppConstants.jwtTokenKey);
       final userId = await _secureStorage.read(key: AppConstants.userIdKey);
-      final onboardingCompleteStr = await _secureStorage.read(key: AppConstants.onboardingCompleteKey);
+      final onboardingCompleteStr =
+          await _secureStorage.read(key: AppConstants.onboardingCompleteKey);
       final onboardingComplete = onboardingCompleteStr == 'true';
+      final biometricAvailable = await _biometricService.isAvailable();
 
       if (token != null && userId != null) {
-        state = state.copyWith(
-          status: onboardingComplete
-              ? AuthStatus.authenticated
-              : AuthStatus.onboardingRequired,
-          jwtToken: token,
-          userId: userId,
-        );
+        final biometricEnabled = await _biometricService.isEnabled();
+
+        if (biometricEnabled) {
+          // JWT exists + biometric opted in → show lock screen
+          state = state.copyWith(
+            status: AuthStatus.locked,
+            jwtToken: token,
+            userId: userId,
+            biometricAvailable: biometricAvailable,
+          );
+        } else {
+          // JWT exists, biometric not set up → go straight in
+          state = state.copyWith(
+            status: onboardingComplete
+                ? AuthStatus.authenticated
+                : AuthStatus.onboardingRequired,
+            jwtToken: token,
+            userId: userId,
+            biometricAvailable: biometricAvailable,
+          );
+        }
       } else {
-        state = state.copyWith(status: AuthStatus.unauthenticated);
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          biometricAvailable: biometricAvailable,
+        );
       }
     } catch (_) {
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
+  }
+
+  /// Called from LockScreen — runs biometric/PIN prompt.
+  Future<void> biometricUnlock() async {
+    state = state.copyWith(isLoading: true);
+    final success = await _biometricService.authenticate();
+    if (success) {
+      final onboardingCompleteStr =
+          await _secureStorage.read(key: AppConstants.onboardingCompleteKey);
+      final onboardingComplete = onboardingCompleteStr == 'true';
+      state = state.copyWith(
+        isLoading: false,
+        status: onboardingComplete
+            ? AuthStatus.authenticated
+            : AuthStatus.onboardingRequired,
+      );
+    } else {
+      state = state.copyWith(
+        isLoading: false,
+        status: AuthStatus.locked,
+        errorMessage: 'Authentication failed. Try again.',
+      );
+    }
+  }
+
+  /// Enable biometric lock for future app launches.
+  Future<void> enableBiometric() async {
+    final success = await _biometricService.authenticate(
+      reason: 'Confirm your identity to enable biometric lock',
+    );
+    if (success) {
+      await _biometricService.setEnabled(true);
+    }
+  }
+
+  /// Disable biometric lock.
+  Future<void> disableBiometric() async {
+    await _biometricService.setEnabled(false);
   }
 
   Future<void> sendOtp(String phoneNumber) async {
@@ -167,7 +233,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     try {
-      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final userCredential =
+          await _firebaseAuth.signInWithCredential(credential);
       final firebaseToken = await userCredential.user?.getIdToken();
 
       if (firebaseToken == null) {
@@ -180,8 +247,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         firebaseToken: firebaseToken,
       );
 
-      final jwtToken = response['access_token'] as String;
-      final userId = response['user_id'] as String;
+      final jwtToken = response['access_token'] as String? ?? '';
+      final userId = response['user_id'] as String? ?? '';
       final isNewUser = response['is_new_user'] as bool? ?? false;
 
       await _secureStorage.write(key: AppConstants.jwtTokenKey, value: jwtToken);
@@ -189,7 +256,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       state = state.copyWith(
         isLoading: false,
-        status: isNewUser ? AuthStatus.onboardingRequired : AuthStatus.authenticated,
+        status:
+            isNewUser ? AuthStatus.onboardingRequired : AuthStatus.authenticated,
         jwtToken: jwtToken,
         userId: userId,
       );
@@ -203,7 +271,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> markOnboardingComplete() async {
-    await _secureStorage.write(key: AppConstants.onboardingCompleteKey, value: 'true');
+    await _secureStorage.write(
+        key: AppConstants.onboardingCompleteKey, value: 'true');
     state = state.copyWith(status: AuthStatus.authenticated);
   }
 
@@ -214,6 +283,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _secureStorage.delete(key: AppConstants.jwtTokenKey);
       await _secureStorage.delete(key: AppConstants.userIdKey);
       await _secureStorage.delete(key: AppConstants.onboardingCompleteKey);
+      await _biometricService.clear();
       state = const AuthState(status: AuthStatus.unauthenticated);
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
@@ -225,9 +295,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
-});
+final authProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) => AuthNotifier());
 
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final status = ref.watch(authProvider).status;

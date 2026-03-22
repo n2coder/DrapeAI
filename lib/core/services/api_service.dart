@@ -122,7 +122,8 @@ class ApiService {
         'firebase_id_token': firebaseToken,
       }),
     );
-    return _handleResponse(response);
+    final result = await _handleResponse(response);
+    return result['data'] as Map<String, dynamic>? ?? result;
   }
 
   Future<void> logout() async {
@@ -169,10 +170,10 @@ class ApiService {
       Uri.parse('$_baseUrl/users/onboarding'),
       headers: headers,
       body: jsonEncode({
-        'gender': gender,
+        'gender': gender.toLowerCase().replaceAll(' ', '_'),
         'age_range': ageRange,
         'city': city,
-        'style_preferences': stylePreferences,
+        'style_preferences': stylePreferences.map((s) => s.toLowerCase()).toList(),
       }),
     );
     return _handleResponse(response);
@@ -183,11 +184,11 @@ class ApiService {
   Future<List<dynamic>> getWardrobeItems() async {
     final headers = await _buildHeaders();
     final response = await _get(
-      Uri.parse('$_baseUrl/wardrobe'),
+      Uri.parse('$_baseUrl/wardrobe/list'),
       headers: headers,
     );
     final result = await _handleResponse(response);
-    return result['items'] as List<dynamic>;
+    return result['data'] as List<dynamic>? ?? [];
   }
 
   Future<Map<String, dynamic>> addClothingItem({
@@ -200,18 +201,20 @@ class ApiService {
   }) async {
     final headers = await _buildHeaders();
     final response = await _post(
-      Uri.parse('$_baseUrl/wardrobe'),
+      Uri.parse('$_baseUrl/wardrobe/add'),
       headers: headers,
       body: jsonEncode({
-        'category': category,
-        'color': color,
-        'style': style,
+        // Normalize to lowercase + underscores to match backend enums
+        'category': category.toLowerCase().replaceAll(' ', '_'),
+        'color': color.toLowerCase(),
+        'style': style.toLowerCase(),
         'image_url': imageUrl,
         if (brand != null) 'brand': brand,
         if (notes != null) 'notes': notes,
       }),
     );
-    return _handleResponse(response);
+    final result = await _handleResponse(response);
+    return result['data'] as Map<String, dynamic>? ?? {};
   }
 
   Future<Map<String, dynamic>> updateClothingItem({
@@ -219,12 +222,25 @@ class ApiService {
     required Map<String, dynamic> updates,
   }) async {
     final headers = await _buildHeaders();
+    // Normalize enum fields to lowercase+underscores to match backend enums
+    final normalized = Map<String, dynamic>.from(updates);
+    if (normalized.containsKey('category')) {
+      normalized['category'] =
+          (normalized['category'] as String).toLowerCase().replaceAll(' ', '_');
+    }
+    if (normalized.containsKey('color')) {
+      normalized['color'] = (normalized['color'] as String).toLowerCase();
+    }
+    if (normalized.containsKey('style')) {
+      normalized['style'] = (normalized['style'] as String).toLowerCase();
+    }
     final response = await _put(
       Uri.parse('$_baseUrl/wardrobe/$itemId'),
       headers: headers,
-      body: jsonEncode(updates),
+      body: jsonEncode(normalized),
     );
-    return _handleResponse(response);
+    final result = await _handleResponse(response);
+    return result['data'] as Map<String, dynamic>? ?? {};
   }
 
   Future<void> deleteClothingItem(String itemId) async {
@@ -250,7 +266,8 @@ class ApiService {
       Uri.parse('$_baseUrl/recommendations/today'),
       headers: headers,
     );
-    return _handleResponse(response);
+    final result = await _handleResponse(response);
+    return result['data'] as Map<String, dynamic>? ?? result;
   }
 
   Future<Map<String, dynamic>> getRecommendationByOccasion({
@@ -258,35 +275,25 @@ class ApiService {
     String? weatherContext,
   }) async {
     final headers = await _buildHeaders();
-    final queryParams = {
-      'occasion': occasion,
-      if (weatherContext != null) 'weather_context': weatherContext,
-    };
-    final uri = Uri.parse(
-      '$_baseUrl/recommendations/occasion',
-    ).replace(queryParameters: queryParams);
-    final response = await _get(uri, headers: headers);
-    return _handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> saveOutfit({
-    required String topId,
-    required String bottomId,
-    required String footwearId,
-    required String occasion,
-  }) async {
-    final headers = await _buildHeaders();
     final response = await _post(
-      Uri.parse('$_baseUrl/recommendations/save'),
+      Uri.parse('$_baseUrl/recommendations/custom'),
       headers: headers,
       body: jsonEncode({
-        'top_id': topId,
-        'bottom_id': bottomId,
-        'footwear_id': footwearId,
-        'occasion': occasion,
+        'occasion': occasion.toLowerCase(),
+        'use_current_weather': weatherContext != null,
       }),
     );
-    return _handleResponse(response);
+    final result = await _handleResponse(response);
+    return result['data'] as Map<String, dynamic>? ?? result;
+  }
+
+  Future<void> saveRecommendation(String recId) async {
+    final headers = await _buildHeaders();
+    final response = await _post(
+      Uri.parse('$_baseUrl/recommendations/$recId/save'),
+      headers: headers,
+    );
+    await _handleResponse(response);
   }
 
   Future<List<dynamic>> getSavedOutfits() async {
@@ -296,7 +303,7 @@ class ApiService {
       headers: headers,
     );
     final result = await _handleResponse(response);
-    return result['outfits'] as List<dynamic>;
+    return result['data'] as List<dynamic>? ?? [];
   }
 
   // ─── Image upload ──────────────────────────────────────────────────────────
@@ -311,7 +318,7 @@ class ApiService {
       await http.MultipartFile.fromPath('file', imageFile.path),
     );
     final streamedResponse = await _client.send(request).timeout(
-      const Duration(seconds: 15),
+      const Duration(seconds: 30),
       onTimeout: () {
         throw const ApiException('Image upload timed out. Please try again.');
       },
@@ -319,13 +326,18 @@ class ApiService {
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final rawUrl = data['secure_url'] as String;
+      final rawUrl = data['secure_url'] as String? ?? '';
+      if (rawUrl.isEmpty) {
+        throw const ApiException('Image upload failed: no URL returned.');
+      }
       // Store a thumbnail URL in the database — Cloudinary serves
       // a small 400×500 image on-the-fly; the original stays on Cloudinary
       // but is never referenced directly in MongoDB.
       return _thumbnailUrl(rawUrl);
     }
-    throw const ApiException('Failed to upload image');
+    final errBody = jsonDecode(response.body) as Map<String, dynamic>? ?? {};
+    final errMsg = errBody['error']?['message'] as String? ?? 'Failed to upload image (${response.statusCode})';
+    throw ApiException(errMsg);
   }
 
   /// Injects Cloudinary thumbnail transforms into a secure URL so that

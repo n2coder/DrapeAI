@@ -25,6 +25,150 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     });
   }
 
+  void _showItemDetail(ClothingItem item) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // drag handle
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // full image
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: controller,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: CachedNetworkImage(
+                            imageUrl: item.imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                            placeholder: (_, __) => const AspectRatio(
+                              aspectRatio: 3 / 4,
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (_, __, ___) => const AspectRatio(
+                              aspectRatio: 3 / 4,
+                              child: Icon(Icons.image_not_supported_outlined, size: 48),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.category,
+                                style: theme.textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
+                            Text('${item.color} · ${item.style}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6))),
+                            if (item.brand != null) ...[
+                              const SizedBox(height: 2),
+                              Text(item.brand!,
+                                  style: theme.textTheme.bodySmall),
+                            ],
+                            if (item.isEnhanced)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('✨ AI Enhanced',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.primaryColor,
+                                          fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // actions
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _confirmDelete(item);
+                        },
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            color: AppTheme.errorColor),
+                        label: const Text('Delete',
+                            style: TextStyle(color: AppTheme.errorColor)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppTheme.errorColor),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          context.push('/add-clothing', extra: item);
+                        },
+                        icon: const Icon(Icons.edit_rounded),
+                        label: const Text('Edit'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(ClothingItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -145,10 +289,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                             final item = filteredItems[index];
                             return _ClothingItemCard(
                               item: item,
-                              onTap: () => context.push(
-                                '/add-clothing',
-                                extra: item,
-                              ),
+                              onTap: () => _showItemDetail(item),
                               onLongPress: () => _confirmDelete(item),
                             );
                           },

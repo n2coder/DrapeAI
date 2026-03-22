@@ -116,14 +116,13 @@ class RecommendationNotifier extends StateNotifier<RecommendationState> {
   Future<bool> saveCurrentOutfit() async {
     final outfit = state.currentOutfit;
     if (outfit == null) return false;
+    if (outfit.id == null) {
+      state = state.copyWith(errorMessage: 'Cannot save: outfit has no ID');
+      return false;
+    }
 
     try {
-      await _apiService.saveOutfit(
-        topId: outfit.top.id,
-        bottomId: outfit.bottom.id,
-        footwearId: outfit.footwear.id,
-        occasion: outfit.occasion,
-      );
+      await _apiService.saveRecommendation(outfit.id!);
       final updatedOutfit = outfit.copyWith(isSaved: true);
       state = state.copyWith(
         currentOutfit: updatedOutfit,

@@ -26,19 +26,29 @@ class ClothingItem {
     this.dalleUrl,
   });
 
-  /// Best available image: dalle > enhanced > original
-  String get displayUrl => dalleUrl ?? enhancedUrl ?? imageUrl;
+  /// Best available image: cloudinary-enhanced > original (DALL-E excluded from grid — unreliable garment type)
+  String get displayUrl => enhancedUrl ?? imageUrl;
 
   /// True once any AI-enhanced version is available
   bool get isEnhanced => enhancedUrl != null || dalleUrl != null;
 
+  /// Converts backend lowercase_underscore enum values to Title Case with spaces.
+  /// e.g. "ethnic_wear" → "Ethnic Wear", "bottom" → "Bottom"
+  static String _normalizeLabel(String? v) {
+    if (v == null || v.isEmpty) return '';
+    return v
+        .split('_')
+        .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+  }
+
   factory ClothingItem.fromJson(Map<String, dynamic> json) {
     return ClothingItem(
-      id: json['id'] as String,
-      category: json['category'] as String,
-      color: json['color'] as String,
-      style: json['style'] as String,
-      imageUrl: json['image_url'] as String,
+      id: json['id'] as String? ?? '',
+      category: _normalizeLabel(json['category'] as String? ?? 'other'),
+      color: _normalizeLabel(json['color'] as String? ?? ''),
+      style: _normalizeLabel(json['style'] as String?),
+      imageUrl: json['image_url'] as String? ?? '',
       userId: json['user_id'] as String? ?? '',
       brand: json['brand'] as String?,
       notes: json['notes'] as String?,

@@ -37,17 +37,22 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   void _startResendTimer() {
+    if (!mounted) return;
     setState(() {
       _resendTimer = 30;
       _canResend = false;
     });
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_resendTimer <= 1) {
         timer.cancel();
-        setState(() => _canResend = true);
+        if (mounted) setState(() => _canResend = true);
       } else {
-        setState(() => _resendTimer--);
+        if (mounted) setState(() => _resendTimer--);
       }
     });
   }
@@ -68,10 +73,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     }
   }
 
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    ref.listenManual(authProvider, (previous, next) {
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final theme = Theme.of(context);
+    final phoneNumber = authState.phoneNumber ?? '';
+
+    ref.listen(authProvider, (previous, next) {
+      if (!mounted) return;
       if (next.status == AuthStatus.authenticated) {
         context.go('/home');
       } else if (next.status == AuthStatus.onboardingRequired) {
@@ -87,13 +97,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         ref.read(authProvider.notifier).clearError();
       }
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    final theme = Theme.of(context);
-    final phoneNumber = authState.phoneNumber ?? '';
 
     return Scaffold(
       appBar: AppBar(

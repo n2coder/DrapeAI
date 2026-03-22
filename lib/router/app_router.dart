@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:style_ai/features/auth/providers/auth_provider.dart';
+import 'package:style_ai/features/auth/screens/lock_screen.dart';
 import 'package:style_ai/features/auth/screens/login_screen.dart';
 import 'package:style_ai/features/auth/screens/otp_screen.dart';
 import 'package:style_ai/features/onboarding/screens/onboarding_screen.dart';
@@ -30,16 +31,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final isAuthRoute = location == '/login' || location == '/otp';
       final isOnboardingRoute = location == '/onboarding';
-      final isAppRoute = location.startsWith('/home') ||
-          location.startsWith('/wardrobe') ||
-          location.startsWith('/add-clothing') ||
-          location.startsWith('/occasion') ||
-          location.startsWith('/outfit-result');
 
       switch (status) {
         case AuthStatus.unauthenticated:
         case AuthStatus.error:
           if (!isAuthRoute) return '/login';
+          return null;
+        case AuthStatus.locked:
+          if (location != '/lock') return '/lock';
           return null;
         case AuthStatus.otpSent:
         case AuthStatus.verifying:
@@ -49,7 +48,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (!isOnboardingRoute) return '/onboarding';
           return null;
         case AuthStatus.authenticated:
-          if (isAuthRoute || isOnboardingRoute || location == '/') {
+          if (isAuthRoute || isOnboardingRoute ||
+              location == '/' || location == '/lock') {
             return '/home';
           }
           return null;
@@ -62,6 +62,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const _SplashScreen(),
+      ),
+      // Lock screen (biometric unlock)
+      GoRoute(
+        path: '/lock',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LockScreen(),
+          transitionsBuilder: _fadeTransition,
+        ),
       ),
       // Auth
       GoRoute(

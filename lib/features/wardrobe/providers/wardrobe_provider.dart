@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,8 +88,11 @@ class WardrobeNotifier extends StateNotifier<WardrobeState> {
   }) async {
     state = state.copyWith(isUploading: true, errorMessage: null);
     try {
+      log('addItem: compressing image', name: 'Wardrobe');
       final compressed = await ImageCompressor.compress(imageFile);
+      log('addItem: uploading to Cloudinary', name: 'Wardrobe');
       final imageUrl = await _apiService.uploadImage(compressed);
+      log('addItem: imageUrl=$imageUrl, calling backend', name: 'Wardrobe');
       final data = await _apiService.addClothingItem(
         category: category,
         color: color,
@@ -97,13 +101,15 @@ class WardrobeNotifier extends StateNotifier<WardrobeState> {
         brand: brand,
         notes: notes,
       );
+      log('addItem: backend response=$data', name: 'Wardrobe');
       final newItem = ClothingItem.fromJson(data);
       state = state.copyWith(
         isUploading: false,
         items: [...state.items, newItem],
       );
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      log('addItem: ERROR $e\n$st', name: 'Wardrobe');
       state = state.copyWith(
         isUploading: false,
         errorMessage: 'Failed to add item: ${e.toString()}',

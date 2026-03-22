@@ -6,8 +6,8 @@ class AppConstants {
 
   // Image upload is proxied through backend — never hardcode credentials in production.
   // Set via backend — never hardcode in production.
-  static const String cloudinaryCloudName = '';
-  static const String cloudinaryUploadPreset = '';
+  static const String cloudinaryCloudName = 'dqrbdm6mt';
+  static const String cloudinaryUploadPreset = 'drapeai_mobile';
 
   // SharedPreferences keys
   static const String jwtTokenKey = 'jwt_token';

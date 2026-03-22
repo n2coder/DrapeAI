@@ -123,26 +123,61 @@ class _AddClothingScreenState extends ConsumerState<AddClothingScreen> {
       return;
     }
 
+    if (_selectedColor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a color'),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedStyle == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a style'),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     bool success;
-    if (_isEditing) {
-      success = await ref.read(wardrobeProvider.notifier).updateItem(
-        itemId: widget.existingItem!.id,
-        category: _selectedCategory,
-        color: _selectedColor,
-        style: _selectedStyle,
-        brand: _brandController.text.isNotEmpty ? _brandController.text : null,
-        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-        newImageFile: _selectedImage,
-      );
-    } else {
-      success = await ref.read(wardrobeProvider.notifier).addItem(
-        imageFile: _selectedImage!,
-        category: _selectedCategory!,
-        color: _selectedColor!,
-        style: _selectedStyle!,
-        brand: _brandController.text.isNotEmpty ? _brandController.text : null,
-        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-      );
+    try {
+      if (_isEditing) {
+        success = await ref.read(wardrobeProvider.notifier).updateItem(
+          itemId: widget.existingItem!.id,
+          category: _selectedCategory,
+          color: _selectedColor,
+          style: _selectedStyle,
+          brand: _brandController.text.isNotEmpty ? _brandController.text : null,
+          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          newImageFile: _selectedImage,
+        );
+      } else {
+        success = await ref.read(wardrobeProvider.notifier).addItem(
+          imageFile: _selectedImage!,
+          category: _selectedCategory!,
+          color: _selectedColor!,
+          style: _selectedStyle!,
+          brand: _brandController.text.isNotEmpty ? _brandController.text : null,
+          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
     }
 
     if (success && mounted) {

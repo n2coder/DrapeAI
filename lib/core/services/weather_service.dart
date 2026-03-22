@@ -28,14 +28,14 @@ class WeatherData {
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
     return WeatherData(
-      temperature: (json['temperature'] as num).toDouble(),
-      description: json['description'] as String,
-      icon: json['icon'] as String,
-      cityName: json['cityName'] as String,
-      feelsLike: (json['feelsLike'] as num).toDouble(),
-      humidity: json['humidity'] as int,
-      windSpeed: (json['windSpeed'] as num).toDouble(),
-      condition: json['condition'] as String,
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.0,
+      description: json['description'] as String? ?? '',
+      icon: json['icon'] as String? ?? '01d',
+      cityName: json['cityName'] as String? ?? '',
+      feelsLike: (json['feelsLike'] as num?)?.toDouble() ?? 0.0,
+      humidity: (json['humidity'] as num?)?.toInt() ?? 0,
+      windSpeed: (json['windSpeed'] as num?)?.toDouble() ?? 0.0,
+      condition: json['condition'] as String? ?? 'clear',
     );
   }
 
@@ -99,7 +99,8 @@ class WeatherService {
         .timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>? ?? body;
       return WeatherData.fromJson(data);
     } else if (response.statusCode == 404) {
       throw Exception('City not found: $city');

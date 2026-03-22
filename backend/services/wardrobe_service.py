@@ -176,15 +176,27 @@ async def add_clothing_item(
 
 async def _enrich_item(oid: ObjectId, image_bytes: bytes, original_url: str, color: str) -> None:
     """
-    Background task: run GPT-4o Vision analysis and Cloudinary/DALL-E image enhancement
-    in parallel, then patch the results into MongoDB.
+    Background task: run GPT-4o Vision analysis first to get garment type, then run
+    Cloudinary/DALL-E image enhancement with a proper description.
     """
     try:
-        vision_task = asyncio.create_task(analyze_clothing_image(image_bytes))
-        enhance_task = asyncio.create_task(
-            enhance_clothing_image(image_bytes, original_url, item_description=f"{color} clothing item")
+        # Vision runs first so we have the garment type for DALL-E
+        attributes = await analyze_clothing_image(image_bytes)
+
+        # Build a precise description for DALL-E using vision results
+        if attributes:
+            fabric = attributes.get("fabric_type") or ""
+            ai_cat = attributes.get("ai_category") or "clothing item"
+            detected_color = attributes.get("detected_color") or color
+            parts = [p for p in [detected_color, fabric, ai_cat] if p]
+            item_description = " ".join(parts)
+        else:
+            item_description = f"{color} clothing item"
+
+        enhanced_url, dalle_url = await enhance_clothing_image(
+            image_bytes, original_url,
+            item_description=item_description,
         )
-        attributes, (enhanced_url, dalle_url) = await asyncio.gather(vision_task, enhance_task)
 
         updates: dict = {}
         if attributes:
@@ -231,6 +243,12 @@ async def update_clothing_item(
         updates["color"] = data.color.lower().strip()
     if data.style is not None:
         updates["style"] = data.style.value if hasattr(data.style, "value") else data.style
+    if data.image_url is not None:
+        updates["image_url"] = data.image_url
+    if data.brand is not None:
+        updates["brand"] = data.brand
+    if data.notes is not None:
+        updates["notes"] = data.notes
 
     if not updates:
         # Nothing to update — return existing item

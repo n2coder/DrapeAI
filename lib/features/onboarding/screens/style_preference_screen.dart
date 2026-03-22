@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:style_ai/core/constants/app_constants.dart';
 import 'package:style_ai/core/theme/app_theme.dart';
 import 'package:style_ai/features/onboarding/providers/onboarding_provider.dart';
 
