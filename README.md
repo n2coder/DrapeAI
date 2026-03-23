@@ -3,7 +3,15 @@
 > An AI-powered mobile app that helps you decide what to wear — using your own wardrobe, your style, and real-time weather.
 
 ---
+## 📸 App Screenshots
 
+<p align="center">
+  <img src="assets/screen1.png" width="250" />
+  <img src="assets/screen2.png" width="250" />
+  <img src="assets/screen3.png" width="250" />
+</p>
+
+---
 ## 🚀 Overview
 
 Most people don’t lack clothes — they lack **clarity**.
