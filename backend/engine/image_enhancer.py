@@ -27,27 +27,24 @@ logger = logging.getLogger(__name__)
 
 def build_enhanced_cloudinary_url(original_url: str) -> str:
     """
-    Inject Cloudinary transformations into an existing secure URL.
+    Inject free Cloudinary transformations into an existing secure URL.
 
-    Transformations applied (in order):
-      e_background_removal   — remove background, replace with white
+    Transformations applied (all free-tier):
       e_improve:outdoor:60   — AI auto-enhance for product photography
       e_auto_color           — auto white balance / colour correction
       e_auto_contrast        — stretch contrast range
       e_sharpen:80           — sharpen edges (clothing detail)
-      b_white                — white canvas behind transparent BG
+
+    Note: e_background_removal is a paid add-on and is intentionally excluded.
     """
     if not original_url or "res.cloudinary.com" not in original_url:
         return original_url
 
-    # Insert transformations between /upload/ and the rest of the path
     transforms = (
-        "e_background_removal,"
         "e_improve:outdoor:60,"
         "e_auto_color,"
         "e_auto_contrast,"
-        "e_sharpen:80,"
-        "b_white"
+        "e_sharpen:80"
     )
     enhanced = re.sub(
         r"(/upload/)",
@@ -115,9 +112,10 @@ async def enhance_with_dalle(image_bytes: bytes, item_description: str) -> Optio
         return None
 
     prompt = (
-        f"Clean professional fashion product photo of a {item_description}. "
-        "Flat lay on pure white background, perfect lighting, no wrinkles, no shadows, "
-        "crisp edges, shot from directly above, high-end e-commerce style."
+        f"High-end e-commerce product photo of exactly one {item_description}. "
+        "The garment must match the description precisely — do not change the garment type, colour, or style. "
+        "Flat lay on a pure white background, perfect soft studio lighting, no wrinkles, "
+        "no shadows, crisp edges, shot straight from above, magazine quality."
     )
 
     try:
@@ -152,15 +150,6 @@ async def enhance_clothing_image(
         dalle_url is only returned when photo quality is poor (score < 6).
     """
     # Always generate the Cloudinary enhanced URL (free, instant)
+    # DALL-E generation is disabled — it generates from text and produces wrong garments.
     enhanced_url = build_enhanced_cloudinary_url(original_url)
-
-    # Grade photo quality
-    grade = await grade_photo(image_bytes)
-    dalle_url: Optional[str] = None
-
-    if grade and grade.get("needs_enhancement") and grade.get("score", 10) < 6:
-        issues = grade.get("issues", [])
-        logger.info("Low quality photo (score=%.1f, issues=%s) — using DALL-E", grade["score"], issues)
-        dalle_url = await enhance_with_dalle(image_bytes, item_description)
-
-    return enhanced_url, dalle_url
+    return enhanced_url, None

@@ -32,6 +32,42 @@ class UserUpdate(BaseModel):
 
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     city: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    gender: Optional[str] = None
+    age_range: Optional[str] = None
+    style_preferences: Optional[list[str]] = None
+
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = {"male", "female", "other", "non_binary", "prefer_not_to_say"}
+        if v not in allowed:
+            raise ValueError(f"gender must be one of {allowed}")
+        return v
+
+    @field_validator("age_range")
+    @classmethod
+    def validate_age_range(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = {"13-17", "18-24", "25-34", "35-44", "45-54", "55+"}
+        if v not in allowed:
+            raise ValueError(f"age_range must be one of {allowed}")
+        return v
+
+    @field_validator("style_preferences")
+    @classmethod
+    def validate_style_preferences(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return v
+        allowed = {"casual", "ethnic", "formal", "urban", "streetwear", "bohemian", "minimalist", "sporty"}
+        for pref in v:
+            if pref not in allowed:
+                raise ValueError(f"style_preference '{pref}' is not valid. Allowed: {allowed}")
+        if len(v) > 2:
+            raise ValueError("Maximum 2 style preferences allowed")
+        return v
 
 
 class OnboardingData(BaseModel):

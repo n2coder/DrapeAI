@@ -103,6 +103,12 @@ async def update_profile(body: UserUpdate, current_user: CurrentUser):
         if len(city) > 100:
             return error(message="City must not exceed 100 characters", status_code=400)
         update_fields["city"] = city
+    if body.gender is not None:
+        update_fields["gender"] = body.gender
+    if body.age_range is not None:
+        update_fields["age_range"] = body.age_range
+    if body.style_preferences is not None:
+        update_fields["style_preferences"] = body.style_preferences
 
     if not update_fields:
         return error(message="No fields to update provided", status_code=400)

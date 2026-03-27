@@ -141,7 +141,7 @@ class ApiService {
   Future<Map<String, dynamic>> getUserProfile() async {
     final headers = await _buildHeaders();
     final response = await _get(
-      Uri.parse('$_baseUrl/users/me'),
+      Uri.parse('$_baseUrl/users/profile'),
       headers: headers,
     );
     return _handleResponse(response);
@@ -152,7 +152,7 @@ class ApiService {
   ) async {
     final headers = await _buildHeaders();
     final response = await _put(
-      Uri.parse('$_baseUrl/users/me'),
+      Uri.parse('$_baseUrl/users/profile'),
       headers: headers,
       body: jsonEncode(profileData),
     );

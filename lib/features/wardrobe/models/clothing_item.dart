@@ -26,8 +26,17 @@ class ClothingItem {
     this.dalleUrl,
   });
 
-  /// Best available image: cloudinary-enhanced > original (DALL-E excluded from grid — unreliable garment type)
-  String get displayUrl => enhancedUrl ?? imageUrl;
+  /// Best available image for thumbnails: cloudinary-enhanced > original.
+  /// Cloudinary applies AI color correction, contrast and sharpening to the real photo.
+  /// DALL-E is excluded — it generates a new image from text and cannot guarantee accuracy.
+  /// Skips enhanced URLs that contain background_removal (paid add-on — may fail to load).
+  String get displayUrl {
+    final usable = (enhancedUrl != null &&
+            !enhancedUrl!.contains('background_removal'))
+        ? enhancedUrl
+        : null;
+    return usable ?? imageUrl;
+  }
 
   /// True once any AI-enhanced version is available
   bool get isEnhanced => enhancedUrl != null || dalleUrl != null;

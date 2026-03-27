@@ -30,6 +30,7 @@ Your task is to examine the clothing item in the photo and return a JSON object
 with the following fields. Be precise and concise.
 
 {
+  "garment_type": "<specific garment name, e.g. jeans, chinos, t-shirt, button-down shirt, hoodie, blazer, sneakers, kurta, saree, leggings>",
   "detected_color": "<primary color name, e.g. navy, olive, off-white>",
   "fabric_type": "<e.g. cotton, denim, silk, wool, polyester, linen, synthetic>",
   "pattern": "<solid | striped | checkered | floral | graphic | abstract | animal-print | plain>",
@@ -44,6 +45,7 @@ with the following fields. Be precise and concise.
 Rules:
 - Return ONLY the raw JSON object, no markdown fences, no explanation.
 - If you cannot determine a field with reasonable confidence, set it to null.
+- garment_type MUST be the specific item name (e.g. "jeans" not "bottom", "t-shirt" not "top").
 - detected_color should be a simple human-readable color name (not hex).
 - formality_level: 1=gym/loungewear, 2=casual, 3=smart-casual, 4=business, 5=black-tie/ethnic formal.
 """

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:style_ai/core/services/api_service.dart';
 import 'package:style_ai/features/auth/providers/auth_provider.dart';
@@ -97,6 +98,9 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
         city: state.city!,
         stylePreferences: state.stylePreferences,
       );
+      // Persist city locally so weather loads correctly on home screen
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_city', state.city!);
       await _authNotifier.markOnboardingComplete();
       state = state.copyWith(isLoading: false, isComplete: true);
       return true;

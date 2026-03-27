@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:style_ai/core/constants/app_constants.dart';
+import 'package:style_ai/core/services/api_service.dart';
 import 'package:style_ai/core/theme/app_theme.dart';
 import 'package:style_ai/core/theme/app_theme_mode.dart';
 import 'package:style_ai/core/theme/theme_provider.dart';
@@ -262,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return GestureDetector(
         onTap: () async {
           final prefs = await SharedPreferences.getInstance();
-          final city = prefs.getString('user_city') ?? 'Mumbai';
+          final city = prefs.getString('user_city') ?? 'Delhi';
           ref
               .read(recommendationProvider.notifier)
               .fetchTodayRecommendation(city: city);
@@ -518,8 +519,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ) {
     final counts = wardrobeState.categoryCounts;
     final topCategories = [
-      ('👔', 'Tops'),
-      ('👖', 'Bottoms'),
+      ('👔', 'Top'),
+      ('👖', 'Bottom'),
       ('👟', 'Footwear'),
     ];
 
@@ -775,7 +776,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.person_outline_rounded),
                     title: const Text('Edit Profile'),
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showEditProfileDialog(context);
+                    },
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -789,6 +793,158 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                   ),
                   const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showEditProfileDialog(BuildContext context) async {
+    // Load current profile from backend
+    Map<String, dynamic> profile = {};
+    try {
+      final result = await ApiService().getUserProfile();
+      profile = (result['data'] as Map<String, dynamic>?) ?? result;
+    } catch (_) {}
+
+    if (!context.mounted) return;
+
+    final nameController = TextEditingController(text: profile['name'] as String? ?? '');
+    final cityController = TextEditingController(text: profile['city'] as String? ?? '');
+    String? selectedGender = profile['gender'] as String?;
+    String? selectedAgeRange = profile['age_range'] as String?;
+    final currentStyles = List<String>.from(profile['style_preferences'] as List? ?? []);
+
+    const genderOptions = ['male', 'female', 'other', 'prefer_not_to_say'];
+    const ageOptions = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
+    const styleOptions = ['casual', 'ethnic', 'formal', 'urban', 'streetwear', 'bohemian', 'minimalist', 'sporty'];
+
+    String formatLabel(String s) => s.split('_').map((w) => '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 24, right: 24, top: 24,
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(width: 40, height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Edit Profile', style: Theme.of(sheetCtx).textTheme.titleLarge),
+                  const SizedBox(height: 20),
+
+                  // Name
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline), border: OutlineInputBorder()),
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // City
+                  TextField(
+                    controller: cityController,
+                    decoration: const InputDecoration(labelText: 'City', prefixIcon: Icon(Icons.location_city_outlined), border: OutlineInputBorder()),
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Gender
+                  DropdownButtonFormField<String>(
+                    value: selectedGender,
+                    decoration: const InputDecoration(labelText: 'Gender', prefixIcon: Icon(Icons.wc_outlined), border: OutlineInputBorder()),
+                    items: genderOptions.map((g) => DropdownMenuItem(value: g, child: Text(formatLabel(g)))).toList(),
+                    onChanged: (v) => setSheetState(() => selectedGender = v),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Age Range
+                  DropdownButtonFormField<String>(
+                    value: selectedAgeRange,
+                    decoration: const InputDecoration(labelText: 'Age Range', prefixIcon: Icon(Icons.calendar_today_outlined), border: OutlineInputBorder()),
+                    items: ageOptions.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                    onChanged: (v) => setSheetState(() => selectedAgeRange = v),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Style Preferences
+                  Text('Style Preferences (max 2)', style: Theme.of(sheetCtx).textTheme.bodyMedium),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: styleOptions.map((s) {
+                      final selected = currentStyles.contains(s);
+                      return FilterChip(
+                        label: Text(formatLabel(s)),
+                        selected: selected,
+                        onSelected: (_) => setSheetState(() {
+                          if (selected) {
+                            currentStyles.remove(s);
+                          } else if (currentStyles.length < 2) {
+                            currentStyles.add(s);
+                          }
+                        }),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        final updates = <String, dynamic>{};
+                        final name = nameController.text.trim();
+                        final city = cityController.text.trim();
+                        if (name.isNotEmpty) updates['name'] = name;
+                        if (city.isNotEmpty) updates['city'] = city;
+                        if (selectedGender != null) updates['gender'] = selectedGender;
+                        if (selectedAgeRange != null) updates['age_range'] = selectedAgeRange;
+                        if (currentStyles.isNotEmpty) updates['style_preferences'] = currentStyles;
+
+                        if (updates.isEmpty) { Navigator.pop(sheetCtx); return; }
+
+                        try {
+                          await ApiService().updateUserProfile(updates);
+                          if (city.isNotEmpty) {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setString('user_city', city);
+                            if (mounted) {
+                              ref.read(recommendationProvider.notifier).fetchTodayRecommendation(city: city);
+                            }
+                          }
+                          if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                        } catch (e) {
+                          if (sheetCtx.mounted) {
+                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                              SnackBar(content: Text('Failed to save: $e'), behavior: SnackBarBehavior.floating),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Save Changes'),
+                    ),
+                  ),
                 ],
               ),
             ),

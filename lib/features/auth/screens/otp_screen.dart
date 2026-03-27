@@ -22,6 +22,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   int _resendTimer = 30;
   Timer? _timer;
   bool _canResend = false;
+  bool _disposed = false;
 
   @override
   void initState() {
@@ -31,8 +32,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   void dispose() {
-    _otpController.dispose();
+    _disposed = true;
     _timer?.cancel();
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -44,15 +46,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     });
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
+      if (_disposed || !mounted) {
         timer.cancel();
         return;
       }
       if (_resendTimer <= 1) {
         timer.cancel();
-        if (mounted) setState(() => _canResend = true);
+        setState(() => _canResend = true);
       } else {
-        if (mounted) setState(() => _resendTimer--);
+        setState(() => _resendTimer--);
       }
     });
   }

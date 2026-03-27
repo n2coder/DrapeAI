@@ -185,10 +185,13 @@ async def _enrich_item(oid: ObjectId, image_bytes: bytes, original_url: str, col
 
         # Build a precise description for DALL-E using vision results
         if attributes:
-            fabric = attributes.get("fabric_type") or ""
-            ai_cat = attributes.get("ai_category") or "clothing item"
-            detected_color = attributes.get("detected_color") or color
-            parts = [p for p in [detected_color, fabric, ai_cat] if p]
+            garment   = attributes.get("garment_type") or attributes.get("ai_category") or "clothing item"
+            det_color = attributes.get("detected_color") or color
+            fabric    = attributes.get("fabric_type") or ""
+            pattern   = attributes.get("pattern") or ""
+            fit       = attributes.get("fit_type") or ""
+            # e.g. "slim-fit light blue denim jeans" or "oversized white cotton t-shirt"
+            parts = [p for p in [fit, det_color, fabric, garment] if p and p not in ("solid", "plain")]
             item_description = " ".join(parts)
         else:
             item_description = f"{color} clothing item"

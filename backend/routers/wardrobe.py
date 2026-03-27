@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException, status
 from core.dependencies import CurrentUser
-from models.wardrobe import ClothingItemAddRequest, ClothingItemUpdate, ClothingItemResponse
+from models.wardrobe import Category, ClothingItemAddRequest, ClothingItemUpdate, ClothingItemResponse
 from services.wardrobe_service import (
     get_user_wardrobe,
     add_clothing_item_from_url,
