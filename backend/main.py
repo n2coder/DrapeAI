@@ -212,8 +212,20 @@ app.include_router(recommendations.router)
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Root + Health check
 # ---------------------------------------------------------------------------
+@app.get("/", tags=["System"], summary="API root", include_in_schema=False)
+async def root():
+    """Root endpoint — confirms the API is live."""
+    return {
+        "success": True,
+        "service": settings.app_title,
+        "version": settings.app_version,
+        "message": "DrapeAI API is running. Visit /health for status.",
+        "docs": "/docs" if settings.debug else None,
+    }
+
+
 @app.get("/health", tags=["System"], summary="Health check")
 async def health_check():
     """Returns service health status. Used by load balancers and monitoring."""
