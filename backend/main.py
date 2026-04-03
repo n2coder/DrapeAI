@@ -19,7 +19,7 @@ from core.firebase_admin import init_firebase
 from core.cloudinary_client import init_cloudinary
 from core.rate_limiter import limiter
 from middleware.security_headers import SecurityHeadersMiddleware
-from routers import auth, users, wardrobe, recommendations
+from routers import auth, users, wardrobe, recommendations, waitlist
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -209,6 +209,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(wardrobe.router)
 app.include_router(recommendations.router)
+app.include_router(waitlist.router)
 
 
 # ---------------------------------------------------------------------------

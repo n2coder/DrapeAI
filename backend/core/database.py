@@ -77,6 +77,16 @@ async def init_indexes() -> None:
     )
     logger.info("Recommendations indexes created")
 
+    # waitlist collection — unique email
+    waitlist_col = db["waitlist"]
+    await waitlist_col.create_indexes(
+        [
+            IndexModel([("email", ASCENDING)], unique=True, name="waitlist_email_unique"),
+            IndexModel([("created_at", ASCENDING)], name="waitlist_created_at"),
+        ]
+    )
+    logger.info("Waitlist indexes created")
+
 
 # Shortcut helpers
 def get_users_collection():

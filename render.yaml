@@ -8,6 +8,13 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://drapeai-wnum.onrender.com
+      - key: VITE_GA4_ID
+        sync: false
+      - key: VITE_CLARITY_ID
+        sync: false
 
   - type: web
     name: styleai-api

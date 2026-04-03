@@ -71,7 +71,10 @@ backend/firebase-service-account.json
 # Docker
 .dockerignore
 
-# Landing page build artifacts
+# Landing page build artifacts and secrets
 landing/node_modules/
 landing/dist/
 landing/.vite/
+landing/.env
+landing/.env.local
+landing/.env.production

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Analytics } from '../utils/analytics'
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 32 },
@@ -221,7 +222,7 @@ export default function Hero() {
 
             {/* CTA buttons */}
             <motion.div {...fadeUp(0.3)} className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-10">
-              <a href="#download" className="btn-primary btn-shimmer">
+              <a href="#download" className="btn-primary btn-shimmer" onClick={() => Analytics.heroCTAClick()}>
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.32.07 2.24.73 3.03.74.87-.02 2.48-.89 4.1-.76 2.66.2 4.64 1.77 4.92 4.76-3.41 1.36-3.95 6.2.06 7.12-.46 1.2-.97 2.36-2.11 3zm-3.05-18.27c.57 2.68-1.78 5.45-4.55 5.17-.5-2.56 1.74-5.5 4.55-5.17z" />
                 </svg>
