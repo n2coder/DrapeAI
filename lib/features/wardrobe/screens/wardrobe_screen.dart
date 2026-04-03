@@ -7,6 +7,7 @@ import 'package:style_ai/core/constants/app_constants.dart';
 import 'package:style_ai/core/theme/app_theme.dart';
 import 'package:style_ai/features/wardrobe/models/clothing_item.dart';
 import 'package:style_ai/features/wardrobe/providers/wardrobe_provider.dart';
+import 'package:style_ai/widgets/common/ai_clothing_placeholder.dart';
 import 'package:style_ai/widgets/common/loading_widget.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
@@ -68,13 +69,23 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                             imageUrl: item.imageUrl,
                             width: double.infinity,
                             fit: BoxFit.contain,
-                            placeholder: (_, __) => const AspectRatio(
+                            placeholder: (_, __) => AspectRatio(
                               aspectRatio: 3 / 4,
-                              child: Center(child: CircularProgressIndicator()),
+                              child: AiClothingPlaceholder(
+                                category: item.category,
+                                color: item.color,
+                                style: item.style,
+                                borderRadius: 16,
+                              ),
                             ),
-                            errorWidget: (_, __, ___) => const AspectRatio(
+                            errorWidget: (_, __, ___) => AspectRatio(
                               aspectRatio: 3 / 4,
-                              child: Icon(Icons.image_not_supported_outlined, size: 48),
+                              child: AiClothingPlaceholder(
+                                category: item.category,
+                                color: item.color,
+                                style: item.style,
+                                borderRadius: 16,
+                              ),
                             ),
                           ),
                         ),
@@ -319,7 +330,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -385,25 +396,28 @@ class _ClothingItemCard extends StatelessWidget {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(16),
                     ),
-                    child: CachedNetworkImage(
-                      imageUrl: item.displayUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      placeholder: (context, url) => Container(
-                        color: theme.colorScheme.surface,
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: theme.colorScheme.surface,
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                          size: 36,
-                        ),
-                      ),
-                    ),
+                    child: item.displayUrl.isEmpty
+                        ? AiClothingPlaceholder(
+                            category: item.category,
+                            color: item.color,
+                            style: item.style,
+                          )
+                        : CachedNetworkImage(
+                            imageUrl: item.displayUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            placeholder: (context, url) => AiClothingPlaceholder(
+                              category: item.category,
+                              color: item.color,
+                              style: item.style,
+                            ),
+                            errorWidget: (context, url, error) =>
+                                AiClothingPlaceholder(
+                              category: item.category,
+                              color: item.color,
+                              style: item.style,
+                            ),
+                          ),
                   ),
                   // ✨ badge when AI-enhanced image is available
                   if (item.isEnhanced)
