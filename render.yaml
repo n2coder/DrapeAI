@@ -12,9 +12,9 @@ services:
       - key: VITE_API_URL
         value: https://drapeai-wnum.onrender.com
       - key: VITE_GA4_ID
-        sync: false
+        value: G-EQCRVPWW6P
       - key: VITE_CLARITY_ID
-        sync: false
+        value: w60ucgdknb
 
   - type: web
     name: styleai-api
