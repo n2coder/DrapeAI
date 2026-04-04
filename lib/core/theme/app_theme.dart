@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_theme_mode.dart';
+import 'package:style_ai/core/theme/app_theme_mode.dart';
 
 class AppTheme {
   AppTheme._();
